@@ -11,7 +11,7 @@ type Mux map[string]http.Handler
 var _ http.Handler = Mux{}
 
 // FallbackHandler is the default fallback handler if no method matched
-var FallbackHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+var FallbackHandler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	m := GetMux(r.Context())
 	for method := range m {
 		if method != "" {
