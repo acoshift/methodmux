@@ -9,10 +9,10 @@ import (
 	"github.com/acoshift/methodmux"
 )
 
-type injecter struct{}
+type inj struct{}
 
 func _handler(w http.ResponseWriter, r *http.Request) {
-	*r.Context().Value(injecter{}).(*int) = 1
+	*r.Context().Value(inj{}).(*int) = 1
 }
 
 var (
@@ -23,39 +23,46 @@ var (
 func testMethod(t *testing.T, method string, h http.Handler, pass bool) {
 	var p int
 	w := httptest.NewRecorder()
-	h.ServeHTTP(w, (&http.Request{Method: method}).WithContext(context.WithValue(ctxBg, injecter{}, &p)))
+	h.ServeHTTP(w, (&http.Request{Method: method}).WithContext(context.WithValue(ctxBg, inj{}, &p)))
 	if pass && p != 1 {
 		t.Errorf("method %s not passed", method)
-	} else if !pass {
-		if w.Code != http.StatusMethodNotAllowed {
-			t.Errorf("method %s must returns method not allowed error", method)
-		}
+	} else if !pass && w.Code != http.StatusMethodNotAllowed {
+		t.Errorf("method %s must returns method not allowed error", method)
 	}
 }
 
 func TestMethodMux(t *testing.T) {
-	testMethod(t, http.MethodGet, methodmux.Get(handler), true)
-	testMethod(t, http.MethodPost, methodmux.Post(handler), true)
-	testMethod(t, http.MethodPatch, methodmux.Patch(handler), true)
-	testMethod(t, http.MethodPut, methodmux.Put(handler), true)
-	testMethod(t, http.MethodDelete, methodmux.Delete(handler), true)
-	testMethod(t, http.MethodHead, methodmux.Head(handler), true)
-	testMethod(t, http.MethodOptions, methodmux.Options(handler), true)
+	testCases := []struct {
+		method  string
+		handler http.Handler
+		pass    bool
+	}{
+		{http.MethodGet, methodmux.Get(handler), true},
+		{http.MethodPost, methodmux.Post(handler), true},
+		{http.MethodPatch, methodmux.Patch(handler), true},
+		{http.MethodPut, methodmux.Put(handler), true},
+		{http.MethodDelete, methodmux.Delete(handler), true},
+		{http.MethodHead, methodmux.Head(handler), true},
+		{http.MethodOptions, methodmux.Options(handler), true},
 
-	testMethod(t, http.MethodGet, methodmux.GetPost(handler, nil), true)
-	testMethod(t, http.MethodPost, methodmux.GetPost(nil, handler), true)
+		{http.MethodGet, methodmux.GetPost(handler, nil), true},
+		{http.MethodPost, methodmux.GetPost(nil, handler), true},
 
-	testMethod(t, http.MethodPatch, methodmux.Post(handler), false)
-	testMethod(t, http.MethodHead, methodmux.Get(handler), true)
-	testMethod(t, http.MethodHead, methodmux.Post(handler), false)
+		{http.MethodPatch, methodmux.Post(handler), false},
+		{http.MethodHead, methodmux.Get(handler), true},
+		{http.MethodHead, methodmux.Post(handler), false},
 
-	testMethod(t, http.MethodGet, methodmux.Mux{"": handler}, true)
-	testMethod(t, http.MethodPost, methodmux.Mux{"": handler}, true)
-	testMethod(t, http.MethodPatch, methodmux.Mux{"": handler}, true)
-	testMethod(t, http.MethodPut, methodmux.Mux{"": handler}, true)
-	testMethod(t, http.MethodDelete, methodmux.Mux{"": handler}, true)
-	testMethod(t, http.MethodHead, methodmux.Mux{"": handler}, true)
-	testMethod(t, http.MethodOptions, methodmux.Mux{"": handler}, true)
-	testMethod(t, "PURGE", methodmux.Mux{"": handler}, true)
-	testMethod(t, "", methodmux.Mux{"": handler}, true)
+		{http.MethodGet, methodmux.Mux{"": handler}, true},
+		{http.MethodPost, methodmux.Mux{"": handler}, true},
+		{http.MethodPatch, methodmux.Mux{"": handler}, true},
+		{http.MethodPut, methodmux.Mux{"": handler}, true},
+		{http.MethodDelete, methodmux.Mux{"": handler}, true},
+		{http.MethodHead, methodmux.Mux{"": handler}, true},
+		{http.MethodOptions, methodmux.Mux{"": handler}, true},
+		{"PURGE", methodmux.Mux{"": handler}, true},
+		{"", methodmux.Mux{"": handler}, true},
+	}
+	for _, c := range testCases {
+		testMethod(t, c.method, c.handler, c.pass)
+	}
 }
