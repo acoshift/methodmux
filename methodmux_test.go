@@ -26,8 +26,8 @@ func testMethod(t *testing.T, method string, h http.Handler, pass bool) {
 	h.ServeHTTP(w, (&http.Request{Method: method}).WithContext(context.WithValue(ctxBg, inj{}, &p)))
 	if pass && p != 1 {
 		t.Errorf("method %s not passed", method)
-	} else if !pass && w.Code != http.StatusNotFound {
-		t.Errorf("method %s must returns not found error", method)
+	} else if !pass && w.Code != http.StatusMethodNotAllowed {
+		t.Errorf("method %s must returns method not allowed error", method)
 	}
 }
 
@@ -47,6 +47,7 @@ func TestMethodMux(t *testing.T) {
 
 		{http.MethodGet, methodmux.GetPost(handler, nil), true},
 		{http.MethodPost, methodmux.GetPost(nil, handler), true},
+		{http.MethodPut, methodmux.GetPost(handler, handler), false},
 
 		{http.MethodPatch, methodmux.Post(handler), false},
 		{http.MethodHead, methodmux.Get(handler), true},
