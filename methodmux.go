@@ -7,6 +7,9 @@ type Mux map[string]http.Handler
 
 var _ http.Handler = Mux{}
 
+// NotFoundHandler is the fallback handler if no method matched
+var NotFoundHandler = http.NotFoundHandler()
+
 func (m Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h := m[r.Method]; h != nil {
 		h.ServeHTTP(w, r)
@@ -27,8 +30,8 @@ func (m Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// handler not found, returns method not allowed
-	http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+	// handler not found, fallback to package's not found handler
+	NotFoundHandler.ServeHTTP(w, r)
 }
 
 // Get is a short-hand for Mux{http.MethodGet: h}
